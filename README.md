@@ -162,4 +162,4 @@ services:
 
 ## 📄 License
 
-MIT
+Prakhar Dwivedi
