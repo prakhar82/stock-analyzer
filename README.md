@@ -58,7 +58,7 @@ stock-analyzer/
 ### Run App
 
 ```bash
-git clone https://github.com/yourusername/stock-analyzer.git
+git clone https://github.com/prakhar82/stock-analyzer.git
 cd stock-analyzer
 docker-compose up --build
 ```
