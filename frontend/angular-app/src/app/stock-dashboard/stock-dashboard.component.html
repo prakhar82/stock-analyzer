@@ -1,0 +1,192 @@
+<div class="dashboard-container">
+  <!-- Upload Section -->
+  <div class="upload-section">
+    <h3>Upload Stock CSV</h3>
+    <input type="file" (change)="onFileSelected($event)" />
+    <button (click)="uploadFile()">Upload</button>
+    <p *ngIf="csvUploadMessage">{{ csvUploadMessage }}</p>
+  </div>
+
+  <!-- Download Buttons -->
+  <div class="download-buttons">
+    <button (click)="downloadCSV()">Download CSV</button>
+    <button (click)="downloadPDF()">Download PDF</button>
+  </div>
+
+  <!-- Portfolio summary -->
+  <div class="portfolio-summary">
+    <h3>Portfolio Summary</h3>
+    <ul>
+      <li><strong>Total Investment:</strong> ₹{{ portfolioSummary.total_investment | number:'1.2-2' }}</li>
+      <li><strong>3-Year Best Case Value:</strong> ₹{{ portfolioSummary['3yr_total_best'] | number:'1.2-2' }}</li>
+      <li><strong>3-Year Worst Case Value:</strong> ₹{{ portfolioSummary['3yr_total_worst'] | number:'1.2-2' }}</li>
+    </ul>
+  </div>
+
+  <div class="topup-report-controls">
+    <input type="date" [(ngModel)]="startDate" />
+    <input type="date" [(ngModel)]="endDate" />
+    <button (click)="downloadTopupReport(startDate, endDate)">Download Top-Up Report PDF</button>
+  </div>
+
+  <!-- Table Section -->
+  <div class="table-section">
+    <h2>Stock List</h2>
+
+    <!-- Filter by symbol or name -->
+    <div class="filter-section">
+      <input
+        type="text"
+        [(ngModel)]="filterText"
+        placeholder="Filter by Symbol or Name"
+        class="filter-input"
+      />
+    </div>
+
+    <table class="stock-table">
+      <thead>
+        <tr>
+          <th (click)="sortBy('symbol')">Symbol <span *ngIf="sortField === 'symbol'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th (click)="sortBy('company_name')">Company Name <span *ngIf="sortField === 'company_name'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th (click)="sortBy('current_price')">Current Price <span *ngIf="sortField === 'current_price'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th (click)="sortBy('quantity')">Quantity <span *ngIf="sortField === 'quantity'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th (click)="sortBy('average_price')">Average Price <span *ngIf="sortField === 'average_price'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th (click)="sortBy('investment')">Investment <span *ngIf="sortField === 'investment'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th (click)="sortBy('profit_loss')">Profit/Loss</th>
+          <th (click)="sortBy('valuation')">Valuation <span *ngIf="sortField === 'valuation'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th (click)="sortBy('recommendation')">Recommendation <span *ngIf="sortField === 'recommendation'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th (click)="sortBy('3yr_best_case_value')">3Y Best Value <span *ngIf="sortField === '3yr_best_case_value'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th (click)="sortBy('3yr_worst_case_value')">3Y Worst Value <span *ngIf="sortField === '3yr_worst_case_value'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+          <th>FII/DII</th>
+          <th>Top-up</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let stock of sortedStocks(); let i = index">
+          <tr [ngClass]="{
+                'fii-increase': stock.fiidi_trend?.status === 'increase',
+                'fii-decrease': stock.fiidi_trend?.status === 'decrease',
+                'strong-sell-blink': stock.recommendation === 'Strong Sell'
+              }">
+            <td>
+              <a href="https://www.screener.in/company/{{ stock.symbol }}/" target="_blank" rel="noopener noreferrer">
+                {{ stock.symbol }}
+              </a>
+            </td>
+            <td>{{ stock.company_name}}</td>
+            <td>{{ stock.current_price | number:'1.2-2' }}</td>
+            <td>{{ stock.quantity }}</td>
+            <td>{{ stock.average_price | number:'1.2-2' }}</td>
+            <td [ngStyle]="{'color': (stock.current_price * stock.quantity) > stock.investment ? 'green' :
+                            (stock.current_price * stock.quantity) < stock.investment ? 'red' : 'black',
+                            'font-weight': (stock.current_price * stock.quantity) === stock.investment ? 'bold' : 'normal'
+                           }">
+              {{ stock.investment | number:'1.2-2' }}</td>
+            <td [ngStyle]="{'color': (stock.current_price * stock.quantity - stock.investment) > 0 ? 'green' : 'red'}">
+                ₹{{ (stock.current_price * stock.quantity - stock.investment) | number:'1.2-2' }}
+            </td>
+
+            <td>{{ stock.valuation }}</td>
+            <td>{{ stock.recommendation }}</td>
+            <td>{{ stock['3yr_best_case_value'] | number:'1.2-2' }}</td>
+            <td>{{ stock['3yr_worst_case_value'] | number:'1.2-2' }}</td>
+
+            <!-- FII/DII toggle button -->
+            <td>
+              <button (click)="toggleFiidi(stock.symbol, $event)" [attr.aria-label]="'Toggle FII/DII for ' + stock.symbol">📊</button>
+            </td>
+
+            <!-- Top-up toggle button -->
+            <td>
+              <button (click)="toggleTopup(stock.symbol, $event)" [attr.aria-label]="'Add top-up for ' + stock.symbol">+</button>
+            </td>
+          </tr>
+
+          <!-- FII/DII expanded table row -->
+          <tr *ngIf="openFiidi === stock.symbol" class="fiidi-row">
+            <td colspan="11">
+              <div class="fii-dii-table-container">
+                <h4>Last 4 Quarters FII/DII Holdings</h4>
+                <table class="fii-dii-table">
+                  <thead>
+                    <tr>
+                      <th>Institution</th>
+                      <th *ngFor="let quarter of stock.fiidi_trend?.quarters">{{ quarter }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>FII Holding (%)</td>
+                      <td *ngFor="let val of stock.fiidi_trend?.fii">{{ val | number:'1.2-2' }}</td>
+                    </tr>
+                    <tr>
+                      <td>DII Holding (%)</td>
+                      <td *ngFor="let val of stock.fiidi_trend?.dii">{{ val | number:'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Top-up form row -->
+          <tr *ngIf="openTopup === stock.symbol" class="topup-form-row">
+            <td colspan="11">
+              <div class="topup-form">
+                <input type="number" min="1" placeholder="Qty" [(ngModel)]="topupData[stock.symbol].quantity" />
+                <input type="number" min="0" step="0.01" placeholder="Price" [(ngModel)]="topupData[stock.symbol].price" />
+                <input type="date" [(ngModel)]="topupData[stock.symbol].date" />
+
+                <!-- Added dropdown for entry_type -->
+                <select [(ngModel)]="topupData[stock.symbol].entry_type">
+                  <option value="Buy">Buy</option>
+                  <option value="Sell">Sell</option>
+                </select>
+                
+
+                <button (click)="submitTopup(stock.symbol)">Add</button>
+              </div>
+              <!-- Success message -->
+              <div *ngIf="uploadMessage[stock.symbol]" class="topup-success-msg">
+                {{ uploadMessage[stock.symbol] }}
+              </div>
+            </td>
+          </tr>
+
+          <!-- Top-up history table -->
+          <tr *ngIf="openTopup === stock.symbol && (stock.topups?.length ?? 0) > 0" class="topup-history-row">
+            <td colspan="11">
+              <table class="topup-history-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Gain/Loss %</th>
+                    <th>Entry Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let topup of stock.topups" [ngClass]="{'buy-entry': topup.entry_type === 'Buy', 'sell-entry': topup.entry_type === 'Sell'}">
+                    <td>{{ topup.date }}</td>
+                    <td>{{ topup.quantity }}</td>
+                    <td>{{ topup.price | number:'1.2-2' }}</td>
+                    <td [ngClass]="{ gain: topup.gain_loss_percent > 0, loss: topup.gain_loss_percent < 0 }">
+                      {{ topup.gain_loss_percent | number:'1.2-2' }}%
+                    </td>
+                    <td>{{ topup.entry_type || 'Buy' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <!-- No top-up history -->
+          <tr *ngIf="openTopup === stock.symbol && !(stock.topups?.length ?? 0)" class="topup-history-row">
+            <td colspan="11">No top-up history found.</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,235 @@
+
+
+.dashboard-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 10px;
+  font-family: Arial, sans-serif;
+
+  .upload-section {
+    margin-bottom: 20px;
+
+    input[type="file"] {
+      margin-right: 10px;
+    }
+
+    button {
+      cursor: pointer;
+      padding: 5px 12px;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: #0056b3;
+      }
+    }
+
+    p {
+      margin-top: 8px;
+      color: green;
+      font-weight: 600;
+    }
+  }
+
+  .success-msg {
+    color: green;
+    font-size: 0.85rem;
+    margin-top: 5px;
+  }
+
+  .table-section {
+    h2 {
+      margin-bottom: 12px;
+    }
+
+    .stock-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+
+      th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+      }
+
+      th {
+        cursor: pointer;
+        background-color: #f8f8f8;
+        user-select: none;
+      }
+
+      tr:nth-child(even) {
+        background-color: #fafafa;
+      }
+
+      tr:hover {
+        background-color: #f1f1f1;
+      }
+
+      /* Highlight rows based on FII/DII trend */
+      &.fii-increase {
+        background-color: #d4edda; /* Light green */
+      }
+      &.fii-decrease {
+        background-color: #f8d7da; /* Light red */
+        animation: blinkRed 1.5s infinite;
+      }
+
+      @keyframes blinkRed {
+        0%, 100% { background-color: #f8d7da; }
+        50% { background-color: #f5c6cb; }
+      }
+
+      /* Strong Sell blinking effect */
+      &.strong-sell-blink {
+        animation: blinkRedOrange 1s infinite;
+        color: white; /* better contrast */
+        border: 2px solid orange; /* optional border */
+      }
+
+      @keyframes blinkRedOrange {
+        0%, 100% { background-color: red; }
+        50% { background-color: orange; }
+      }
+    }
+
+    button {
+      padding: 2px 8px;
+      font-weight: bold;
+      font-size: 18px;
+      border-radius: 4px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: #218838;
+      }
+    }
+
+    /* Top-up form row */
+    .topup-form-row td {
+      padding: 12px;
+      background-color: #f9f9f9;
+
+      .topup-form {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+
+        input[type="number"],
+        input[type="date"],
+        select {
+          padding: 6px 8px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          width: 100px;
+          font-size: 14px;
+          background-color: white;
+          cursor: pointer;
+        }
+
+        button {
+          background-color: #007bff;
+          font-size: 14px;
+          padding: 6px 12px;
+
+          &:hover {
+            background-color: #0056b3;
+          }
+        }
+      }
+    }
+
+    /* Top-up history table */
+    .topup-history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+
+      th, td {
+        border: 1px solid #ccc;
+        padding: 6px 8px;
+        text-align: center;
+      }
+
+      th {
+        background-color: #e9ecef;
+      }
+
+      .gain {
+        color: green;
+        font-weight: 600;
+      }
+
+      .loss {
+        color: red;
+        font-weight: 600;
+      }
+      
+    }
+
+    /* FII/DII table */
+    .fii-dii-table-container {
+      margin-top: 15px;
+      font-size: 13px;
+
+      h4 {
+        margin-bottom: 6px;
+      }
+
+      .fii-dii-table {
+        width: 100%;
+        border-collapse: collapse;
+
+        th, td {
+          border: 1px solid #ddd;
+          padding: 5px 8px;
+          text-align: center;
+        }
+
+        th {
+          background-color: #f1f1f1;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  .portfolio-summary {
+    margin-top: 25px;
+
+    h3 {
+      margin-bottom: 10px;
+    }
+
+    ul {
+      list-style: none;
+      padding-left: 0;
+
+      li {
+        font-size: 15px;
+        margin-bottom: 6px;
+
+        strong {
+          margin-right: 6px;
+        }
+      }
+    }
+  }
+}
+
+.topup-history-table tr.buy-entry {
+  background-color: #d4edda !important;
+}
+
+.topup-history-table tr.sell-entry {
+  background-color: #f8d7da !important;
+}
