@@ -19,7 +19,7 @@ router = APIRouter()
 
 # Define paths
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data"))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data"))
 STOCK_CSV = os.path.join(BASE_DIR, "stocks.csv")
 TOPUP_DIR = os.path.join(BASE_DIR, "topups")
 os.makedirs(TOPUP_DIR, exist_ok=True)

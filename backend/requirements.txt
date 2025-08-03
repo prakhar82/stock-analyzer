@@ -10,3 +10,6 @@ beautifulsoup4
 lxml
 requests
 joblib
+cachetools
+diskcache
+python-multipart

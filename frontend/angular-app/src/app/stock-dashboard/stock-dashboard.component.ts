@@ -5,7 +5,6 @@ import { StockService, Stock, PortfolioSummary } from '../services/stock.service
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// Define interface for the response from getStocks and uploadStockCSV
 interface StockListResponse {
   stocks: Stock[];
   portfolio_summary: PortfolioSummary;
@@ -29,21 +28,22 @@ export class StockDashboardComponent implements OnInit {
     '3yr_total_best': 0,
     '3yr_total_worst': 0
   };
+
   sortField: string = 'symbol';
   sortDirection: 'asc' | 'desc' = 'asc';
   filterText: string = '';
 
   csvUploadMessage: string = '';
-
   startDate: string = '';
   endDate: string = '';
 
   selectedFile: File | null = null;
-
   openTopup: string | null = null;
-  topupData: { [symbol: string]: { quantity: number; price: number; date: string; entry_type: string } } = {};
-
   openFiidi: string | null = null;
+
+  topupData: {
+    [symbol: string]: { quantity: number; price: number; date: string; entry_type: string };
+  } = {};
 
   constructor(private stockService: StockService) {}
 
@@ -57,7 +57,6 @@ export class StockDashboardComponent implements OnInit {
         ...stock,
         profit_loss: stock.current_price * stock.quantity - stock.investment
       }));
-
       this.portfolioSummary = response.portfolio_summary;
 
       for (let stock of this.stocks) {
@@ -65,6 +64,35 @@ export class StockDashboardComponent implements OnInit {
           this.topupData[stock.symbol] = { quantity: 0, price: 0, date: '', entry_type: 'Buy' };
         }
       }
+    });
+  }
+
+  getDisplayedStocks(): Stock[] {
+  let result = this.stocks;
+
+  if (this.filterText.trim()) {
+    const lower = this.filterText.toLowerCase();
+    result = result.filter(stock =>
+      stock.symbol.toLowerCase().includes(lower) ||
+      (stock.company_name && stock.company_name.toLowerCase().includes(lower))
+    );
+  }
+
+  return this.sortStocks(result);
+}
+
+  sortStocks(stocks: Stock[]): Stock[] {
+    return stocks.slice().sort((a, b) => {
+      const valueA = a[this.sortField as keyof Stock] ?? '';
+      const valueB = b[this.sortField as keyof Stock] ?? '';
+
+      if (typeof valueA === 'number' && typeof valueB === 'number') {
+        return this.sortDirection === 'asc' ? valueA - valueB : valueB - valueA;
+      }
+
+      return this.sortDirection === 'asc'
+        ? String(valueA).localeCompare(String(valueB))
+        : String(valueB).localeCompare(String(valueA));
     });
   }
 
@@ -90,7 +118,7 @@ export class StockDashboardComponent implements OnInit {
           this.csvUploadMessage = 'Upload successful!';
           for (let stock of this.stocks) {
             if (!this.topupData[stock.symbol]) {
-            this.topupData[stock.symbol] = { quantity: 0, price: 0, date: '', entry_type: 'Buy' };
+              this.topupData[stock.symbol] = { quantity: 0, price: 0, date: '', entry_type: 'Buy' };
             }
           }
         },
@@ -101,54 +129,27 @@ export class StockDashboardComponent implements OnInit {
     }
   }
 
-  
-
-  sortedStocks(): Stock[] {
-    return this.stocks.slice().sort((a, b) => {
-      const valueA = a[this.sortField as keyof Stock] ?? 0;
-      const valueB = b[this.sortField as keyof Stock] ?? 0;
-
-      if (typeof valueA === 'number' && typeof valueB === 'number') {
-        return this.sortDirection === 'asc' ? valueA - valueB : valueB - valueA;
-      }
-
-      const aStr = String(valueA).toLowerCase();
-      const bStr = String(valueB).toLowerCase();
-      return this.sortDirection === 'asc'
-        ? aStr.localeCompare(bStr)
-        : bStr.localeCompare(aStr);
-    });
-  }
-
   toggleTopup(symbol: string, event: Event): void {
     event.stopPropagation();
     this.openTopup = this.openTopup === symbol ? null : symbol;
   }
 
-  
   submitTopup(symbol: string): void {
-  const data = this.topupData[symbol];
-  if (!data.quantity || !data.price || !data.date || !data.entry_type) return;
+    const data = this.topupData[symbol];
+    if (!data.quantity || !data.price || !data.date || !data.entry_type) return;
 
-  this.stockService.topupStock(symbol, data).subscribe({
-    next: (response: StockListResponse) => {
-      this.stocks = response.stocks;
-      this.portfolioSummary = response.portfolio_summary;
-      this.uploadMessage[symbol] = `Top-up for ${symbol} added successfully ✅`;
-
-      // Keep the entry_type default to "Buy" after reset
-      this.topupData[symbol] = { quantity: 0, price: 0, date: '', entry_type: 'Buy' };
-    },
-    error: () => {
-      this.uploadMessage[symbol] = `Failed to add top-up for ${symbol} ❌`;
-    }
-  });
+    this.stockService.topupStock(symbol, data).subscribe({
+      next: (response: StockListResponse) => {
+        this.stocks = response.stocks;
+        this.portfolioSummary = response.portfolio_summary;
+        this.uploadMessage[symbol] = `Top-up for ${symbol} added successfully ✅`;
+        this.topupData[symbol] = { quantity: 0, price: 0, date: '', entry_type: 'Buy' };
+      },
+      error: () => {
+        this.uploadMessage[symbol] = `Failed to add top-up for ${symbol} ❌`;
+      }
+    });
   }
-
-
-
-
-
 
   toggleFiidi(symbol: string, event: Event): void {
     event.stopPropagation();
@@ -169,42 +170,39 @@ export class StockDashboardComponent implements OnInit {
   }
 
   downloadPDF(): void {
-  const doc = new jsPDF();
+    const doc = new jsPDF();
+    const headers = [['Symbol', 'Current Price', 'Quantity', 'Avg Price', 'Investment', 'Valuation', 'Recommendation', '3yr Best', '3yr Worst']];
 
-  const headers = [['Symbol', 'Current Price', 'Quantity', 'Avg Price', 'Investment', 'Valuation', 'Recommendation', '3yr Best', '3yr Worst']];
+    const data = this.stocks.map(stock => [
+      stock.symbol,
+      stock.current_price,
+      stock.quantity,
+      stock.average_price,
+      stock.investment,
+      stock.valuation,
+      stock.recommendation,
+      stock['3yr_best_case_value'],
+      stock['3yr_worst_case_value'],
+    ]);
 
-  const data = this.stocks.map(stock => [
-    stock.symbol,
-    stock.current_price,
-    stock.quantity,
-    stock.average_price,
-    stock.investment,
-    stock.valuation,
-    stock.recommendation,
-    stock['3yr_best_case_value'],
-    stock['3yr_worst_case_value'],
-  ]);
+    autoTable(doc, { head: headers, body: data });
+    doc.save('stock-portfolio.pdf');
+  }
 
-  autoTable(doc, {
-    head: headers,
-    body: data,
-  });
-
-  doc.save('stock-portfolio.pdf');
+  downloadTopupReport(startDate: string, endDate: string): void {
+    this.stockService.downloadTopupPdf(startDate, endDate).subscribe({
+      next: (pdfBlob: Blob) => {
+        const url = window.URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'topup_report.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (err: any) => {
+        console.error('Download failed:', err);
+        alert('Failed to download PDF. Please check the date range or try again later.');
+      }
+    });
+  }
 }
-
-downloadTopupReport(startDate: string, endDate: string): void {
-  this.stockService.downloadTopupPdf(startDate, endDate).subscribe(blob => {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `topup_report_${startDate}_to_${endDate}.pdf`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-  });
-}
-
-
-}
-
-

@@ -22,6 +22,7 @@ def get_stock_info_base(symbol: str) -> dict:
     eps = None
     valuation = "Unknown"
 
+    # Try NSE FNO
     try:
         quote = nse_fno(symbol)
         if quote and isinstance(quote, dict) and "data" in quote and quote["data"]:
@@ -29,11 +30,14 @@ def get_stock_info_base(symbol: str) -> dict:
             pe_ratio = quote["data"][0].get("pE")
             eps = quote["data"][0].get("eps")
         else:
-            print(f"[DEBUG] nse_fno empty for {symbol}, trying nse_eq")
+            print(f"[DEBUG] nse_fno returned no data for {symbol}")
+    except requests.exceptions.ReadTimeout:
+        print(f"[TIMEOUT] nse_fno timed out for {symbol}")
     except Exception as e:
         print(f"[ERROR] nse_fno failed for {symbol}: {e}")
         traceback.print_exc()
 
+    # Fallback to NSE EQ if FNO fails
     if price is None or price == 0:
         try:
             quote = nse_eq(symbol)
@@ -41,9 +45,12 @@ def get_stock_info_base(symbol: str) -> dict:
             pe_ratio = quote.get("metadata", {}).get("pdSectorPe")
             eps = quote.get("metadata", {}).get("eps")
             source = "nse_eq"
+        except requests.exceptions.ReadTimeout:
+            print(f"[TIMEOUT] nse_eq timed out for {symbol}")
         except Exception as e:
             print(f"[ERROR] nse_eq failed for {symbol}: {e}")
             traceback.print_exc()
+            # Try adding `.NS` as last attempt
             try:
                 symbol_ns = symbol if symbol.endswith('.NS') else symbol + '.NS'
                 quote = nse_eq(symbol_ns)
@@ -52,10 +59,11 @@ def get_stock_info_base(symbol: str) -> dict:
                 eps = quote.get("metadata", {}).get("eps")
                 source = "nse_eq_with_NS"
             except Exception as e2:
-                print(f"[ERROR] nse_eq with .NS failed for {symbol_ns}: {e2}")
+                print(f"[ERROR] nse_eq with .NS failed for {symbol}: {e2}")
                 traceback.print_exc()
-                return {"symbol": symbol, "error": "Not found in nse_fno or nse_eq"}
+                return {"symbol": symbol, "error": "Not found in NSE APIs"}
 
+    # Valuation logic
     try:
         pe = float(pe_ratio)
         if pe < 20:
@@ -67,6 +75,7 @@ def get_stock_info_base(symbol: str) -> dict:
     except Exception:
         valuation = "Unknown"
 
+    # Screener data
     fiidi_trend = fetch_fiidi_trend_screener(symbol)
     if not fiidi_trend:
         fiidi_trend = {

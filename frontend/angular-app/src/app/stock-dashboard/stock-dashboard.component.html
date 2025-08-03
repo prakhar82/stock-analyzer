@@ -62,7 +62,7 @@
         </tr>
       </thead>
       <tbody>
-        <ng-container *ngFor="let stock of sortedStocks(); let i = index">
+        <ng-container *ngFor="let stock of getDisplayedStocks(); let i = index">
           <tr [ngClass]="{
                 'fii-increase': stock.fiidi_trend?.status === 'increase',
                 'fii-decrease': stock.fiidi_trend?.status === 'decrease',

@@ -1,6 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map  } from 'rxjs';
+import { HttpResponse } from '@angular/common/http';
+
+
+import { environment } from '../../environments/environment';
+
+
+
 
 // Export these interfaces
 export interface Stock {
@@ -28,8 +35,9 @@ export interface PortfolioSummary {
 @Injectable({
   providedIn: 'root'
 })
+
 export class StockService {
-  private baseUrl = 'http://localhost:8000/stock';
+  private baseUrl = environment.API_URL;
 
   constructor(private http: HttpClient) {}
 
@@ -50,7 +58,18 @@ export class StockService {
   downloadTopupPdf(startDate: string, endDate: string): Observable<Blob> {
   const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
   return this.http.get(`${this.baseUrl}/download-topup-pdf?${params.toString()}`, {
-    responseType: 'blob' // Important for handling binary files like PDF
-  });
+    responseType: 'blob',
+    observe: 'response'
+  }).pipe(
+    map((response: HttpResponse<Blob>) => {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/pdf')) {
+        return response.body as Blob;
+      } else {
+        throw new Error('Invalid PDF file or error response from server.');
+      }
+    })
+  );
 }
+
 }

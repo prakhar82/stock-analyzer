@@ -8,7 +8,7 @@ from typing import List, Dict
 
 from app.services.finance_api import get_stock_info_base  # adjust import path
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data/topups"))
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/topups"))
 
 
 def get_current_prices(symbols: List[str]) -> Dict[str, float]:
